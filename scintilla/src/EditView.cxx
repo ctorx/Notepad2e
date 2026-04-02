@@ -619,6 +619,7 @@ Point EditView::LocationFromPosition(Surface *surface, const EditModel &model, S
 		pt = ll->PointFromPosition(posInLine, vs.lineHeight, pe);
 		pt.y += (lineVisible - topLine) * vs.lineHeight;
 		pt.x += vs.textStart - model.xOffset;
+		pt.y += vs.topContentInset;
 	}
 	pt.x += pos.VirtualSpace() * vs.styles[ll->EndLineStyle()].spaceWidth;
 	return pt;
@@ -651,8 +652,8 @@ Range EditView::RangeDisplayLine(Surface *surface, const EditModel &model, Sci::
 
 SelectionPosition EditView::SPositionFromLocation(Surface *surface, const EditModel &model, PointDocument pt, bool canReturnInvalid, bool charPosition, bool virtualSpace, const ViewStyle &vs) {
 	pt.x = pt.x - vs.textStart;
-	Sci::Line visibleLine = static_cast<int>(std::floor(pt.y / vs.lineHeight));
-	if (!canReturnInvalid && (visibleLine < 0))
+	Sci::Line visibleLine = static_cast<int>(std::floor(pt.y / static_cast<double>(vs.lineHeight)));
+	if (visibleLine < 0)
 		visibleLine = 0;
 	const Sci::Line lineDoc = model.pcs->DocFromDisplay(visibleLine);
 	if (canReturnInvalid && (lineDoc < 0))
@@ -1362,6 +1363,8 @@ void EditView::DrawCarets(Surface *surface, const EditModel &model, const ViewSt
 				XYPOSITION widthOverstrikeCaret;
 				XYPOSITION caretWidthOffset = 0;
 				PRectangle rcCaret = rcLine;
+				// Vertical line caret: shorten from the top only (~20% of line height); bottom stays on baseline band.
+				constexpr XYPOSITION caretLineTopInsetFraction = 0.2f;
 
 				if (posCaret.Position() == model.pdoc->Length()) {   // At end of document
 					caretAtEOF = true;
@@ -1384,6 +1387,10 @@ void EditView::DrawCarets(Surface *surface, const EditModel &model, const ViewSt
 					/* Dragging text, use a line caret */
 					rcCaret.left = round(xposCaret - caretWidthOffset);
 					rcCaret.right = rcCaret.left + vsDraw.caretWidth * dsf();
+					{
+						const XYPOSITION lineHeight = rcLine.bottom - rcLine.top;
+						rcCaret.top = rcLine.top + lineHeight * caretLineTopInsetFraction;
+					}
 				} else if ((caretShape == ViewStyle::CaretShape::bar) && drawOverstrikeCaret) {
 					/* Overstrike (insert mode), use a modified bar caret */
 					rcCaret.top = rcCaret.bottom - 2;
@@ -1402,6 +1409,10 @@ void EditView::DrawCarets(Surface *surface, const EditModel &model, const ViewSt
 					/* Line caret */
 					rcCaret.left = round(xposCaret - caretWidthOffset);
 					rcCaret.right = rcCaret.left + vsDraw.caretWidth * dsf();
+					{
+						const XYPOSITION lineHeight = rcLine.bottom - rcLine.top;
+						rcCaret.top = rcLine.top + lineHeight * caretLineTopInsetFraction;
+					}
 				}
 				const ColourDesired caretColour = mainCaret ? vsDraw.caretcolour : vsDraw.additionalCaretColour;
 				if (drawBlockCaret) {
@@ -2020,7 +2031,8 @@ void EditView::PaintText(Surface *surfaceWindow, const EditModel &model, PRectan
 
 		const Point ptOrigin = model.GetVisibleOriginInMain();
 
-		const int screenLinePaintFirst = static_cast<int>(rcArea.top) / vsDraw.lineHeight;
+		const int adjAreaTop = static_cast<int>(rcArea.top) - vsDraw.topContentInset;
+		const int screenLinePaintFirst = (adjAreaTop > 0) ? (adjAreaTop / vsDraw.lineHeight) : 0;
 		const int xStart = vsDraw.textStart - model.xOffset + static_cast<int>(ptOrigin.x);
 
 		SelectionPosition posCaret = model.sel.RangeMain().caret;
@@ -2044,6 +2056,14 @@ void EditView::PaintText(Surface *surfaceWindow, const EditModel &model, PRectan
 			surfaceWindow->SetClip(rcClipText);
 		}
 
+		if (vsDraw.topContentInset > 0) {
+			PRectangle rcTopPad = rcTextArea;
+			rcTopPad.bottom = std::min(rcTopPad.top + vsDraw.topContentInset, rcClient.bottom);
+			rcTopPad.top = std::max(rcTopPad.top, rcArea.top);
+			if (rcTopPad.bottom > rcTopPad.top && rcArea.Intersects(rcTopPad))
+				surfaceWindow->FillRectangle(rcTopPad, vsDraw.styles[STYLE_DEFAULT].back);
+		}
+
 		// Loop on visible lines
 #if defined(TIME_PAINTING)
 		double durLayout = 0.0;
@@ -2065,10 +2085,11 @@ void EditView::PaintText(Surface *surfaceWindow, const EditModel &model, PRectan
 			phases.push_back(drawAll);
 		}
 		for (const DrawPhase &phase : phases) {
+			const int yposScreenBase = screenLinePaintFirst * vsDraw.lineHeight + vsDraw.topContentInset;
 			int ypos = 0;
 			if (!bufferedDraw)
-				ypos += screenLinePaintFirst * vsDraw.lineHeight;
-			int yposScreen = screenLinePaintFirst * vsDraw.lineHeight;
+				ypos += yposScreenBase;
+			int yposScreen = yposScreenBase;
 			Sci::Line visibleLine = model.TopLineOfMain() + screenLinePaintFirst;
 			while (visibleLine < model.pcs->LinesDisplayed() && yposScreen < rcArea.bottom) {
 
@@ -2162,7 +2183,7 @@ void EditView::PaintText(Surface *surfaceWindow, const EditModel &model, PRectan
 		PRectangle rcBeyondEOF = (vsDraw.marginInside) ? rcClient : rcArea;
 		rcBeyondEOF.left = static_cast<XYPOSITION>(vsDraw.textStart);
 		rcBeyondEOF.right = rcBeyondEOF.right - ((vsDraw.marginInside) ? vsDraw.rightMarginWidth : 0);
-		rcBeyondEOF.top = static_cast<XYPOSITION>((model.pcs->LinesDisplayed() - model.TopLineOfMain()) * vsDraw.lineHeight);
+		rcBeyondEOF.top = static_cast<XYPOSITION>((model.pcs->LinesDisplayed() - model.TopLineOfMain()) * vsDraw.lineHeight + vsDraw.topContentInset);
 		if (rcBeyondEOF.top < rcBeyondEOF.bottom) {
 			surfaceWindow->FillRectangle(rcBeyondEOF, vsDraw.styles[STYLE_DEFAULT].back);
 			if (vsDraw.edgeState == EDGE_LINE) {
@@ -2242,6 +2263,7 @@ Sci::Position EditView::FormatRange(bool draw, const Sci_RangeToFormat *pfr, Sur
 
 	ViewStyle vsPrint(vs);
 	vsPrint.technology = SC_TECHNOLOGY_DEFAULT;
+	vsPrint.topContentInset = 0;
 
 	// Modify the view style for printing as do not normally want any of the transient features to be printed
 	// Printing supports only the line number margin.

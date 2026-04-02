@@ -312,7 +312,7 @@ PointDocument Editor::DocumentPointFromView(Point ptView) const {
 		ptDocument.y += ptOrigin.y;
 	} else {
 		ptDocument.x += xOffset;
-		ptDocument.y += topLine * vs.lineHeight;
+		ptDocument.y += topLine * vs.lineHeight - vs.topContentInset;
 	}
 	return ptDocument;
 }
@@ -341,9 +341,9 @@ PRectangle Editor::GetTextRectangle() const {
 
 Sci::Line Editor::LinesOnScreen() const {
 	const PRectangle rcClient = GetClientRectangle();
-	const int htClient = static_cast<int>(rcClient.bottom - rcClient.top);
+	const int htClient = static_cast<int>(rcClient.bottom - rcClient.top) - vs.topContentInset;
 	//Platform::DebugPrintf("lines on screen = %d\n", htClient / lineHeight + 1);
-	return htClient / vs.lineHeight;
+	return std::max(htClient, 0) / vs.lineHeight;
 }
 
 Sci::Line Editor::LinesToScroll() const {
@@ -441,7 +441,8 @@ Sci::Position Editor::PositionFromLineX(Sci::Line lineDoc, int x) {
 }
 
 Sci::Line Editor::LineFromLocation(Point pt) const {
-	return pcs->DocFromDisplay(static_cast<int>(pt.y) / vs.lineHeight + topLine);
+	const int yLine = std::max(static_cast<int>(pt.y) - vs.topContentInset, 0);
+	return pcs->DocFromDisplay(yLine / vs.lineHeight + topLine);
 }
 
 void Editor::SetTopLine(Sci::Line topLineNew) {
@@ -555,12 +556,12 @@ PRectangle Editor::RectangleFromRange(Range r, int overlap) {
 	PRectangle rc;
 	const int leftTextOverlap = ((xOffset == 0) && (vs.leftMarginWidth > 0)) ? 1 : 0;
 	rc.left = static_cast<XYPOSITION>(vs.textStart - leftTextOverlap);
-	rc.top = static_cast<XYPOSITION>((minLine - TopLineOfMain()) * vs.lineHeight - overlap);
+	rc.top = static_cast<XYPOSITION>((minLine - TopLineOfMain()) * vs.lineHeight - overlap + vs.topContentInset);
 	if (rc.top < rcClientDrawing.top)
 		rc.top = rcClientDrawing.top;
 	// Extend to right of prepared area if any to prevent artifacts from caret line highlight
 	rc.right = rcClientDrawing.right;
-	rc.bottom = static_cast<XYPOSITION>((maxLine - TopLineOfMain() + 1) * vs.lineHeight + overlap);
+	rc.bottom = static_cast<XYPOSITION>((maxLine - TopLineOfMain() + 1) * vs.lineHeight + overlap + vs.topContentInset);
 
 	return rc;
 }
@@ -1103,7 +1104,7 @@ void Editor::MoveCaretInsideView(bool ensureVisible) {
 					false, false, UserVirtualSpace()),
 					Selection::noSel, ensureVisible);
 	} else if ((pt.y + vs.lineHeight - 1) > rcClient.bottom) {
-		const ptrdiff_t yOfLastLineFullyDisplayed = static_cast<ptrdiff_t>(rcClient.top) + (LinesOnScreen() - 1) * vs.lineHeight;
+		const ptrdiff_t yOfLastLineFullyDisplayed = static_cast<ptrdiff_t>(rcClient.top) + vs.topContentInset + (LinesOnScreen() - 1) * vs.lineHeight;
 		MovePositionTo(SPositionFromLocation(
 		            Point::FromInts(lastXChosen - xOffset, static_cast<int>(rcClient.top + yOfLastLineFullyDisplayed)),
 					false, false, UserVirtualSpace()),
@@ -5255,7 +5256,8 @@ Sci::Position Editor::PositionAfterArea(PRectangle rcArea) const {
 	// The start of the document line after the display line after the area
 	// This often means that the line after a modification is restyled which helps
 	// detect multiline comment additions and heals single line comments
-	const Sci::Line lineAfter = TopLineOfMain() + static_cast<Sci::Line>(rcArea.bottom - 1) / vs.lineHeight + 1;
+	const int bottomAdj = static_cast<int>(rcArea.bottom) - 1 - vs.topContentInset;
+	const Sci::Line lineAfter = TopLineOfMain() + static_cast<Sci::Line>(std::max(bottomAdj, 0) / vs.lineHeight) + 1;
 	if (lineAfter < pcs->LinesDisplayed())
 		return pdoc->LineStart(pcs->DocFromDisplay(lineAfter) + 1);
 	else
@@ -8180,6 +8182,14 @@ sptr_t Editor::WndProc(unsigned int iMessage, uptr_t wParam, sptr_t lParam) {
 
 	case SCI_GETEXTRADESCENT:
 		return vs.extraDescent;
+
+	case SCI_SETTOPCONTENTINSET:
+		vs.topContentInset = std::max(0, static_cast<int>(wParam));
+		InvalidateStyleRedraw();
+		break;
+
+	case SCI_GETTOPCONTENTINSET:
+		return vs.topContentInset;
 
 	case SCI_MARGINSETSTYLEOFFSET:
 		vs.marginStyleOffset = static_cast<int>(wParam);

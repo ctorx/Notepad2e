@@ -7372,10 +7372,12 @@ void UpdateLineNumberWidth(HWND hwnd)
   char tchFirstLineIndex[32], tchLastLineIndex[32];
   int  iLineMarginWidthNow;
   int  iLineMarginWidthFit;
+  // Scintilla ViewStyle default (spacing left of text, not the line-number margin)
+  const int iDefaultTextLeftMargin = 1;
 
   if (bShowLineNumbers)
   {
-    // [2e]: View > St&arting Line Number... #342
+    // [2e]: View > St&arting Line Number... #342 (`_%i_` template reserves `_`-wide slack each side of digits)
     wsprintfA(tchFirstLineIndex, "_%i_", n2e_GetVisibleLineNumber(0));
     wsprintfA(tchLastLineIndex, "_%i_", n2e_GetVisibleLineNumber(SendMessage(hwnd, SCI_GETLINECOUNT, 0, 0) - 1));
 
@@ -7395,6 +7397,13 @@ void UpdateLineNumberWidth(HWND hwnd)
 
   else
     SendMessage(hwnd, SCI_SETMARGINWIDTHN, 0, 0);
+
+  // [2e] Text area left padding + single top band (not per-line): `SCI_TEXTWIDTH`(STYLE_LINENUMBER, "_")
+  {
+    const int padUnderscore = (int)SendMessage(hwnd, SCI_TEXTWIDTH, STYLE_LINENUMBER, (LPARAM) "_");
+    SendMessage(hwnd, SCI_SETMARGINLEFT, 0, iDefaultTextLeftMargin + padUnderscore);
+    SendMessage(hwnd, SCI_SETTOPCONTENTINSET, (WPARAM)padUnderscore, 0);
+  }
 }
 
 

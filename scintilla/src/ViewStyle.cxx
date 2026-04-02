@@ -125,6 +125,7 @@ ViewStyle::ViewStyle(const ViewStyle &source) : markers(MARKER_MAX + 1), indicat
 	extraFontFlag = source.extraFontFlag;
 	extraAscent = source.extraAscent;
 	extraDescent = source.extraDescent;
+	topContentInset = source.topContentInset;
 	marginStyleOffset = source.marginStyleOffset;
 	annotationVisible = source.annotationVisible;
 	annotationStyleOffset = source.annotationStyleOffset;
@@ -258,6 +259,7 @@ void ViewStyle::Init(size_t stylesSize_) {
 	extraFontFlag = 0;
 	extraAscent = 0;
 	extraDescent = 0;
+	topContentInset = 0;
 	marginStyleOffset = 0;
 	annotationVisible = ANNOTATION_HIDDEN;
 	annotationStyleOffset = 0;

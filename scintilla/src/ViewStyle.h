@@ -142,6 +142,8 @@ public:
 	int extraFontFlag;
 	int extraAscent;
 	int extraDescent;
+	/// Pixels of empty space above the first visible line (margin + text); does not change line height.
+	int topContentInset;
 	int marginStyleOffset;
 	int annotationVisible;
 	int annotationStyleOffset;

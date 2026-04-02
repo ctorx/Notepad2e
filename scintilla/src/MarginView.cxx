@@ -223,9 +223,10 @@ void MarginView::PaintMargin(Surface *surface, Sci::Line topLine, PRectangle rc,
 				surface->FillRectangle(rcSelMargin, vs.styles[STYLE_LINENUMBER].back);
 			}
 
-			const int lineStartPaint = static_cast<int>(rcMargin.top + ptOrigin.y) / vs.lineHeight;
+			const Sci::Position virtTop = static_cast<Sci::Position>(rcMargin.top + ptOrigin.y) - vs.topContentInset;
+			const int lineStartPaint = virtTop > 0 ? static_cast<int>(virtTop / vs.lineHeight) : 0;
 			Sci::Line visibleLine = model.TopLineOfMain() + lineStartPaint;
-			Sci::Position yposScreen = lineStartPaint * vs.lineHeight - static_cast<Sci::Position>(ptOrigin.y);
+			Sci::Position yposScreen = lineStartPaint * vs.lineHeight - static_cast<Sci::Position>(ptOrigin.y) + vs.topContentInset;
 			// Work out whether the top line is whitespace located after a
 			// lessening of fold level which implies a 'fold tail' but which should not
 			// be displayed until the last of a sequence of whitespace.
@@ -392,7 +393,9 @@ void MarginView::PaintMargin(Surface *surface, Sci::Line topLine, PRectangle rc,
 						PRectangle rcNumber = rcMarker;
 						// Right justify
 						const XYPOSITION width = surface->WidthText(fontLineNumber, sNumber.c_str(), static_cast<int>(sNumber.length()));
-						const XYPOSITION xpos = rcNumber.right - width - vs.marginNumberPadding;
+						// Match Notepad2 `_%i_` gutter sizing: inset equals line-number font width of `_` left and right
+						const XYPOSITION lineNumPad = surface->WidthText(fontLineNumber, "_", 1);
+						const XYPOSITION xpos = std::max(rcMarker.left + lineNumPad, rcNumber.right - width - lineNumPad);
 						rcNumber.left = xpos;
 						DrawTextNoClipPhase(surface, rcNumber, vs.styles[STYLE_LINENUMBER],
 							rcNumber.top + vs.maxAscent, sNumber.c_str(), static_cast<int>(sNumber.length()), drawAll);
