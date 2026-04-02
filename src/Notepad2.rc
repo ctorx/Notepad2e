@@ -388,6 +388,7 @@ BEGIN
         MENUITEM "C&ustomize Toolbar...",       IDM_VIEW_CUSTOMIZETB
         MENUITEM "Sh&ow Statusbar",             IDM_VIEW_STATUSBAR
         MENUITEM SEPARATOR
+        MENUITEM "Force save on exit",          ID_SETTINGS_FORCE_SAVE_ON_EXIT
         POPUP "Save Setti&ngs"
         BEGIN
             MENUITEM "Remember Recent F&iles",      IDM_VIEW_NOSAVERECENT

@@ -16,6 +16,7 @@ extern EHighlightCurrentSelectionMode iHighlightSelection;
 extern BOOL bEditSelectionScope;
 extern ESaveOnLoseFocus iSaveOnLoseFocus;
 extern BOOL bCtrlWheelScroll;
+extern BOOL bForceSaveOnExit;
 extern BOOL bMoveCaretOnRightClick;
 extern EExpressionEvaluationMode iEvaluateMathExpression;
 extern EWordNavigationMode iWordNavigationMode;

@@ -42,6 +42,7 @@
 #define IDM_FILE_ELEVATE                60
 #define IDM_HELP_COMMANDLINEARGUMENTS   61
 #define IDM_HELP_MANUAL                 62
+#define ID_SETTINGS_FORCE_SAVE_ON_EXIT  63
 #define IDR_MAINWND                     100
 #define IDC_FINDTEXT                    100
 #define IDC_LINENUM                     100

@@ -51,6 +51,7 @@
 #define INI_SETTING_SPLIT_LINES L"SplitLines"
 #define INI_SETTING_STARTING_LINE_NUMBER L"StartingLineNumber"
 #define INI_SETTING_DRAFTS_PATH L"DraftsPath"
+#define INI_SETTING_FORCE_SAVE_ON_EXIT L"ForceSaveOnExit"
 
 #ifdef LPEG_LEXER
 #define INI_SETTING_LPEG_PATH L"LPegPath"
@@ -75,6 +76,7 @@ EUsePrefixInOpenDialog iUsePrefixInOpenDialog = UPO_AUTO;
 BOOL bUsePrefixInOpenDialog = FALSE;
 ESaveOnLoseFocus iSaveOnLoseFocus = SLF_DISABLED;
 BOOL bCtrlWheelScroll = TRUE;
+BOOL bForceSaveOnExit = TRUE;
 BOOL bMoveCaretOnRightClick = TRUE;
 EExpressionEvaluationMode iEvaluateMathExpression = EEM_LINE;
 EWordNavigationMode iWordNavigationMode = WNM_STANDARD;
@@ -551,6 +553,7 @@ void n2e_LoadINI()
   iHighlightSelection = IniGetInt(N2E_INI_SECTION, INI_SETTING_HIGHLIGHT_SELECTION, iHighlightSelection);
   bEditSelectionScope = IniGetInt(N2E_INI_SECTION, INI_SETTING_EDIT_SELECTION_SCOPE, bEditSelectionScope);
   bCtrlWheelScroll = IniGetInt(N2E_INI_SECTION, INI_SETTING_WHEEL_SCROLL, bCtrlWheelScroll);
+  bForceSaveOnExit = IniGetInt(N2E_INI_SECTION, INI_SETTING_FORCE_SAVE_ON_EXIT, bForceSaveOnExit);
   iWheelScrollInterval = IniGetInt(N2E_INI_SECTION, INI_SETTING_WHEEL_SCROLL_INTERVAL, iWheelScrollInterval);
   IniGetString(N2E_INI_SECTION, INI_SETTING_CLOCK_FORMAT, L"", wchClockFormat, COUNTOF(wchClockFormat));
   iCSSSettings = IniGetInt(N2E_INI_SECTION, INI_SETTING_CSS_SETTINGS, iCSSSettings);
@@ -651,6 +654,7 @@ void n2e_SaveINI()
   IniSetInt(N2E_INI_SECTION, INI_SETTING_HIGHLIGHT_SELECTION, iHighlightSelection);
   IniSetInt(N2E_INI_SECTION, INI_SETTING_EDIT_SELECTION_SCOPE, bEditSelectionScope);
   IniSetInt(N2E_INI_SECTION, INI_SETTING_WHEEL_SCROLL, bCtrlWheelScroll);
+  IniSetInt(N2E_INI_SECTION, INI_SETTING_FORCE_SAVE_ON_EXIT, bForceSaveOnExit);
   IniSetInt(N2E_INI_SECTION, INI_SETTING_WHEEL_SCROLL_INTERVAL, iWheelScrollInterval);
   IniSetString(N2E_INI_SECTION, INI_SETTING_CLOCK_FORMAT, wchClockFormat);
   IniSetInt(N2E_INI_SECTION, INI_SETTING_CSS_SETTINGS, iCSSSettings);

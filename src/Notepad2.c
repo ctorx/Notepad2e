@@ -1043,14 +1043,18 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT umsg, WPARAM wParam, LPARAM lParam)
 
 
     case WM_CLOSE:
-      if (FileSave(FALSE, TRUE, FALSE, SCM_NO, FALSE))
+      if (!bForceSaveOnExit && n2e_IsDocumentModified())
+        DestroyWindow(hwnd);
+      else if (FileSave(FALSE, TRUE, FALSE, SCM_NO, FALSE))
         DestroyWindow(hwnd);
       break;
 
 
     case WM_QUERYENDSESSION:
+      if (!bForceSaveOnExit && n2e_IsDocumentModified())
+        return TRUE;
       // [2e]: Customize Windows shutdown prevention message on modified file #422
-      if (bModified && (lstrlen(szCurFile) > 0))
+      if (bForceSaveOnExit && bModified && (lstrlen(szCurFile) > 0))
       {
         WCHAR tchs[MAX_STR_BLOCKREASON] = { 0 };
         FormatString(tchs, COUNTOF(tchs), IDS_UNSAVED_FILENAME, PathFindFileName(szCurFile));
@@ -2277,6 +2281,7 @@ void MsgInitMenu(HWND hwnd, WPARAM wParam, LPARAM lParam)
   EnableCmd(hmenu, IDM_VIEW_SAVESETTINGSNOW, i);
   // [2e]: Ctrl+Wheel scroll feature
   CheckCmd(hmenu, ID_SETTINGS_CTRL_WHEEL_SCROLL, bCtrlWheelScroll);
+  CheckCmd(hmenu, ID_SETTINGS_FORCE_SAVE_ON_EXIT, bForceSaveOnExit);
   // [2e]: Implement Notepad's right click behavior #54
   CheckCmd(hmenu, ID_SETTINGS_MOVE_CARET_ON_RCLICK, bMoveCaretOnRightClick);
   // [2e]: MathEval INI setting #88
@@ -4602,6 +4607,9 @@ LRESULT MsgCommand(HWND hwnd, WPARAM wParam, LPARAM lParam)
       break;
     // [/2e]
 
+    case ID_SETTINGS_FORCE_SAVE_ON_EXIT:
+      bForceSaveOnExit = !bForceSaveOnExit;
+      break;
 
     // [2e]: Implement Notepad's right click behavior #54
     case ID_SETTINGS_MOVE_CARET_ON_RCLICK:
